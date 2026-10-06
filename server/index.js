@@ -24,7 +24,7 @@ app.use("/api", validadeKey)
 const { cardRoutes } = setupRoutes();
 app.use(cardRoutes.getRoutes());
 
-app.listen(process.env.PORT || 7000).on("listening", () => {
+app.listen(process.env.PORT || 7000, '127.0.0.1').on("listening", () => {
     console.log("servidor rodando na porta 3000");
     executeCronJobs();
 })
