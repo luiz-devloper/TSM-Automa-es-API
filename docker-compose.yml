@@ -3,9 +3,9 @@ services:
     build: .
     container_name: TSM
     ports:
-      - "3000:3000"
+      - "7000:7000"
     environment:
-      - PORT=3000
+      - PORT=7000
       - NODE_ENV=development
     volumes:
       - .:/app
