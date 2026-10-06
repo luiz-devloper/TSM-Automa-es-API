@@ -1,0 +1,15 @@
+{"timestamp":"2026-09-29T11:50:59.091Z","level":"error","message":"Erro ao tentar reagendar card https://app.goalfy.com.br/board/92103539-5129-4590-945f-c17daf51ccf2/cards/06122122-2087-4158-94e0-0e333ba07cbc para novo reagendamento Segunda tentativa"}
+{"timestamp":"2026-09-29T13:41:00.724Z","level":"error","message":"Erro ao tentar mover card https://app.goalfy.com.br/board/0bab7dcc-b9fe-4893-8e98-cef2f5b0ebfd/cards/2cd01044-ab06-4f50-91ce-528d02de4038"}
+{"timestamp":"2026-09-29T13:44:01.002Z","level":"error","message":"Erro ao tentar mover card https://app.goalfy.com.br/board/0bab7dcc-b9fe-4893-8e98-cef2f5b0ebfd/cards/2cd01044-ab06-4f50-91ce-528d02de4038"}
+{"timestamp":"2026-09-29T13:45:01.005Z","level":"error","message":"Erro ao tentar mover card https://app.goalfy.com.br/board/0bab7dcc-b9fe-4893-8e98-cef2f5b0ebfd/cards/2cd01044-ab06-4f50-91ce-528d02de4038"}
+{"timestamp":"2026-09-29T13:46:00.757Z","level":"error","message":"Erro ao tentar mover card https://app.goalfy.com.br/board/0bab7dcc-b9fe-4893-8e98-cef2f5b0ebfd/cards/2cd01044-ab06-4f50-91ce-528d02de4038"}
+{"timestamp":"2026-09-29T13:47:00.965Z","level":"error","message":"Erro ao tentar mover card https://app.goalfy.com.br/board/0bab7dcc-b9fe-4893-8e98-cef2f5b0ebfd/cards/2cd01044-ab06-4f50-91ce-528d02de4038"}
+{"timestamp":"2026-09-29T13:47:00.970Z","level":"error","message":"Erro ao verificar os procediementos atrelados á agendamentos"}
+{"timestamp":"2026-09-29T13:48:05.777Z","level":"error","message":"Erro ao tentar mover card https://app.goalfy.com.br/board/0bab7dcc-b9fe-4893-8e98-cef2f5b0ebfd/cards/2cd01044-ab06-4f50-91ce-528d02de4038"}
+{"timestamp":"2026-09-29T13:48:05.780Z","level":"error","message":"Erro ao verificar os procediementos atrelados á agendamentos"}
+{"timestamp":"2026-09-29T13:49:00.928Z","level":"error","message":"Erro ao tentar mover card https://app.goalfy.com.br/board/0bab7dcc-b9fe-4893-8e98-cef2f5b0ebfd/cards/2cd01044-ab06-4f50-91ce-528d02de4038"}
+{"timestamp":"2026-09-29T13:49:00.930Z","level":"error","message":"Erro ao verificar os procediementos atrelados á agendamentos"}
+{"timestamp":"2026-09-29T13:50:00.773Z","level":"error","message":"Erro ao tentar mover card https://app.goalfy.com.br/board/0bab7dcc-b9fe-4893-8e98-cef2f5b0ebfd/cards/2cd01044-ab06-4f50-91ce-528d02de4038"}
+{"timestamp":"2026-09-29T13:50:00.774Z","level":"error","message":"Erro ao verificar os procediementos atrelados á agendamentos"}
+{"timestamp":"2026-09-29T14:03:00.717Z","level":"error","message":"Erro ao tentar mover card https://app.goalfy.com.br/board/0bab7dcc-b9fe-4893-8e98-cef2f5b0ebfd/cards/f1fb368f-2074-48aa-afea-3ed00d90c791"}
+{"timestamp":"2026-10-02T16:41:36.098Z","level":"error","message":"Erro ao tentar mover card https://app.goalfy.com.br/board//cards/f4f09ff4-7c07-41f4-8bf2-c936947bffd0"}

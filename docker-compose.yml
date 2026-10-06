@@ -1,0 +1,14 @@
+services:
+  api:
+    build: .
+    container_name: TSM
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=development
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run start
+    restart: unless-stopped
