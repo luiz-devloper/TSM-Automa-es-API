@@ -1,91 +1,91 @@
-// attacker-view.js
-// Uso:
-//   node attacker-view.js
-//   TOKEN="seu-jwt" BODY='{"campo":"valor"}' node attacker-view.js
-import { connect } from 'net';
-import { connect as _connect } from 'tls';
-import { request } from 'https';
+// test-rate-limit.js
+// Uso: node test-rate-limit.js [url] [quantidade] [concorrência]
+const TARGET = process.argv[2] || 'https://api-goalfy.tsmmonitoramento.com.br/';
+const TOTAL_REQUESTS = Number(process.argv[3] || 50);
+const CONCURRENCY = Number(process.argv[4] || 20); // dispara em paralelo, pra simular rajada
 
-const TARGET = process.env.URL ||
-  'https://api-goalfy.tsmmonitoramento.com.br/api/automacoes/card/workOrder/7850d678-ec10-4080-9296-7d9b1438a9ca/procedure';
-const TOKEN = process.env.TOKEN || 'TSM_37f4c9a2__LOYAL__e81d64b3f9c0a7__TOTAL__e5d2b8f6c13a94e7d0c5b2f8a61';
-const BODY = process.env.BODY || '{"nome":"luiz teste"}';
+async function hit(i) {
+    const start = Date.now();
+    try {
+        const res = await fetch(TARGET, { method: 'GET' });
+        const ms = Date.now() - start;
+        let body = null;
 
-const url = new URL(TARGET);
-const port = Number(url.port || 443);
-const payload = Buffer.from(BODY);
-
-const headers = {
-  'Content-Type': 'application/json',
-  'Content-Length': payload.length,
-  Accept: 'application/json',
-};
-if (TOKEN) headers.Authorization = `Bearer ${TOKEN}`;
-
-// Dados sensíveis que, se um atacante conseguir ler em claro, é falha grave
-const secrets = [url.pathname, BODY, TOKEN].filter(Boolean);
-
-const raw = connect({ host: url.hostname, port });
-const wireBytes = []; // TUDO que passa no cabo, nos dois sentidos, sem decriptar
-
-const origWrite = raw.write.bind(raw);
-raw.write = (chunk, ...args) => {
-  wireBytes.push({ dir: '→ cliente->servidor', data: Buffer.from(chunk) });
-  return origWrite(chunk, ...args);
-};
-raw.on('data', (d) => wireBytes.push({ dir: '← servidor->cliente', data: d }));
-
-const secure = _connect({ socket: raw, servername: url.hostname });
-
-secure.on('secureConnect', () => {
-  const req = request({
-    host: url.hostname,
-    path: url.pathname + url.search,
-    method: 'POST',
-    headers,
-    agent: false,
-    createConnection: () => secure,
-  }, (res) => {
-    res.on('data', () => {});
-    res.on('end', () => {
-      console.log(`\n=========== O QUE UM ATACANTE NA REDE VERIA ===========`);
-      console.log(`(capturando os bytes crus do cabo, sem ter a chave TLS)\n`);
-
-      let totalBytes = 0;
-      let anyLeak = false;
-
-      wireBytes.forEach(({ dir, data }, i) => {
-        totalBytes += data.length;
-        const text = data.toString('latin1');
-        const leaks = secrets.filter((s) => s && text.includes(s));
-        if (leaks.length) anyLeak = true;
-
-        console.log(`--- Pacote ${i + 1} ${dir} (${data.length} bytes) ---`);
-        console.log(`hex : ${data.subarray(0, 64).toString('hex')}${data.length > 64 ? '...' : ''}`);
-        console.log(`raw : ${JSON.stringify(text.slice(0, 120))}${text.length > 120 ? '...' : ''}`);
-        if (leaks.length) {
-          console.log(`  !! LEGÍVEL: encontrado em claro -> ${leaks.map((l) => `"${l.slice(0, 40)}"`).join(', ')}`);
-        } else {
-          console.log(`  ok: nenhum dado sensível legível (parece encriptado)`);
+        // Só lê o corpo quando for status de limite, pra não desperdiçar tempo nas 200
+        if (res.status === 429 || res.status === 503) {
+            try {
+                body = await res.text();
+            } catch {
+                body = '(falha ao ler corpo)';
+            }
         }
-        console.log();
-      });
 
-      console.log(`=========================================================`);
-      console.log(`Total capturado: ${totalBytes} bytes em ${wireBytes.length} pacotes`);
-      console.log(
-        anyLeak
-          ? `RESULTADO: VAZAMENTO — dados sensíveis trafegaram em texto puro!`
-          : `RESULTADO: nada legível capturado — payload, path e token não aparecem em claro na rede (TLS está escondendo o conteúdo do atacante).`
-      );
-      console.log(`\nObs: o atacante NÃO vê status code, headers nem body da resposta —`);
-      console.log(`isso só aparece decriptado aqui porque este script tem a sessão TLS.`);
+        return { i, status: res.status, ms, body };
+    } catch (err) {
+        return { i, status: 'ERRO', ms: Date.now() - start, error: err.message };
+    }
+}
+
+async function run() {
+    console.log(`Disparando ${TOTAL_REQUESTS} requisições para ${TARGET} (concorrência: ${CONCURRENCY})\n`);
+
+    const results = [];
+    for (let i = 0; i < TOTAL_REQUESTS; i += CONCURRENCY) {
+        const batch = Array.from(
+            { length: Math.min(CONCURRENCY, TOTAL_REQUESTS - i) },
+            (_, j) => hit(i + j + 1)
+        );
+        const batchResults = await Promise.all(batch);
+        results.push(...batchResults);
+    }
+
+    // Resumo por status
+    const byStatus = {};
+    results.forEach(r => {
+        byStatus[r.status] = (byStatus[r.status] || 0) + 1;
     });
-  });
 
-  req.on('error', (e) => console.error('Erro na requisição:', e.message));
-  req.write(payload);
-  req.end();
-});
+    console.log('=== Resultado por status ===');
+    Object.entries(byStatus)
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([status, count]) => {
+            console.log(`  ${status}: ${count} requisições`);
+        });
 
-secure.on('error', (e) => console.error('Erro TLS:', e.message));
+    const limited = results.filter(r => r.status === 429 || r.status === 503);
+    console.log(`\n=== Diagnóstico ===`);
+
+    if (limited.length === 0) {
+        console.log('⚠️  Nenhuma requisição foi bloqueada — rate limit pode não estar ativo,');
+        console.log('    ou o volume/concorrência do teste foi baixo demais para disparar o limite.');
+        console.log('    Tente aumentar a concorrência ou o total de requisições.');
+    } else {
+        const statusUsed = limited[0].status;
+        console.log(`✅ Rate limit ativo — ${limited.length} de ${TOTAL_REQUESTS} requisições foram limitadas.`);
+
+        if (statusUsed === 503) {
+            console.log(`⚠️  Retornando 503 em vez de 429 — confira "limit_req_status 429;" no nginx.conf`);
+            console.log(`    e lembre de ter dado "sudo nginx -t && sudo systemctl reload nginx" depois de editar.`);
+        } else {
+            console.log(`✅ Retornando o status correto: 429.`);
+        }
+
+        // Mostra o corpo da primeira resposta limitada, pra confirmar se é o JSON customizado
+        console.log(`\n--- Corpo da primeira resposta limitada (#${limited[0].i}, ${limited[0].ms}ms) ---`);
+        console.log(limited[0].body);
+
+        const isCustomJson = limited[0].body?.trim().startsWith('{');
+        console.log(isCustomJson
+            ? '\n✅ Corpo customizado em JSON confirmado — location = /429.json está funcionando.'
+            : '\n⚠️  O corpo não parece ser o JSON customizado — pode estar caindo na página de erro padrão do Nginx.\n    Confira se "error_page 429 /429.json;" está dentro do location certo.');
+    }
+
+    // Tempo médio das que passaram, só por curiosidade
+    const ok = results.filter(r => r.status === 200);
+    if (ok.length > 0) {
+        const avgMs = Math.round(ok.reduce((sum, r) => sum + r.ms, 0) / ok.length);
+        console.log(`\nTempo médio das requisições bem-sucedidas: ${avgMs}ms (${ok.length} requisições)`);
+    }
+}
+
+run();

@@ -13,57 +13,70 @@ const inputLogPath = process.env.LOG_PATH
 const REPORT_ENDPOINT = 'https://flow.goalfy.com.br/automations/v1/d314c99f-b39d-4093-bf65-32ad3310c0c1/hooks/catch/';
 
 /**
- * Lê o arquivo de logs e analisa as entradas
+ * Retorna a data (dd/mm/aaaa) de um Date, no fuso de São Paulo —
+ * usado para comparar se um log pertence ao dia que queremos filtrar
  */
-function processErrorLogs(logFilePath) {
+function dateKey(date) {
+    return date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+}
+
+/**
+ * Lê o arquivo de logs e analisa apenas as entradas do dia informado
+ * (por padrão, o dia de hoje)
+ */
+function processErrorLogs(logFilePath, targetDate = new Date()) {
     if (!fs.existsSync(logFilePath)) {
         throw new Error(`Arquivo não encontrado em: ${logFilePath}`);
     }
 
+    const targetKey = dateKey(targetDate);
     const fileContent = fs.readFileSync(logFilePath, 'utf-8');
     const lines = fileContent.split('\n').filter(line => line.trim() !== '');
 
     let totalErrors = 0;
     const errorsByType = {};
-    const affectedCards = [];
     const logDetails = [];
 
     lines.forEach(line => {
         try {
             const logEntry = JSON.parse(line);
 
-            if (logEntry.level === 'error') {
-                totalErrors++;
+            if (logEntry.level !== 'error') return;
 
-                const timestamp = new Date(logEntry.timestamp).toLocaleString('pt-BR');
-                const message = logEntry.message;
+            const entryDate = new Date(logEntry.timestamp);
 
-                const urlMatch = message.match(/(https?:\/\/app\.goalfy\.com\.br\/[^\s]+)/);
-                const cardUrl = urlMatch ? urlMatch[0] : null;
+            // Filtra só as entradas do dia alvo
+            if (dateKey(entryDate) !== targetKey) return;
 
-                let category = 'Outros Erros';
-                if (message.includes('reagendar card')) {
-                    category = 'Falha ao Reagendar Card';
-                } else if (message.includes('mover card')) {
-                    category = 'Falha ao Mover Card';
-                } else if (message.includes('procediementos atrelados')) {
-                    category = 'Falha ao Verificar Procedimentos';
-                }
+            totalErrors++;
 
-                errorsByType[category] = (errorsByType[category] || 0) + 1;
+            const timestamp = entryDate.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+            const message = logEntry.message;
 
-                if (cardUrl) {
-                    affectedCards.push({ timestamp, category, url: cardUrl });
-                }
+            const urlMatch = message.match(/(https?:\/\/app\.goalfy\.com\.br\/[^\s]+)/);
+            const cardUrl = urlMatch ? urlMatch[0] : null;
 
-                logDetails.push({ timestamp, category, message, cardUrl });
+            let category = 'Outros Erros';
+            if (message.includes('reagendar card')) {
+                category = 'Falha ao Reagendar Card';
+            } else if (message.includes('mover card')) {
+                category = 'Falha ao Mover Card';
+            } else if (message.includes('procediementos atrelados')) {
+                category = 'Falha ao Verificar Procedimentos';
             }
+
+            errorsByType[category] = (errorsByType[category] || 0) + 1;
+
+            logDetails.push({ timestamp, category, message, cardUrl });
         } catch (err) {
             // Ignora linhas que não são JSON válido
         }
     });
 
-    return { totalErrors, errorsByType, affectedCards, logDetails };
+    // Mais recentes primeiro
+    logDetails.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    return { totalErrors, errorsByType, logDetails };
 }
 
 function escapeHtml(str) {
@@ -75,7 +88,6 @@ function escapeHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
-// Paleta por categoria, para a barrinha lateral e o badge de cada item
 const CATEGORY_COLORS = {
     'Falha ao Reagendar Card': '#d97706',
     'Falha ao Mover Card': '#dc2626',
@@ -104,24 +116,23 @@ function htmlShell(title, bodyContent) {
 }
 
 /**
- * Relatório para quando NÃO há erros
+ * Relatório para quando NÃO há erros no dia
  */
-function generateNoErrorsReport() {
-    const now = new Date().toLocaleString('pt-BR');
+function generateNoErrorsReport(targetDate) {
+    const dayLabel = dateKey(targetDate);
 
     const body = `
     <div style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
         <div style="background:linear-gradient(135deg,#059669,#10b981);padding:32px;text-align:center;">
             <div style="font-size:40px;line-height:1;">✅</div>
             <h1 style="margin:12px 0 4px;color:#ffffff;font-size:20px;">Tudo certo por aqui</h1>
-            <p style="margin:0;color:#d1fae5;font-size:13px;">Nenhum erro registrado no período monitorado</p>
+            <p style="margin:0;color:#d1fae5;font-size:13px;">Nenhum erro registrado em ${dayLabel}</p>
         </div>
         <div style="padding:28px 32px;text-align:center;">
             <p style="font-size:14px;color:#4b5563;margin:0;">
                 A varredura em <strong>errors.log</strong> não encontrou nenhuma entrada com nível
-                <code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;">error</code>.
+                <code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;">error</code> para esse dia.
             </p>
-            <p style="font-size:12px;color:#9ca3af;margin-top:20px;">Verificado em ${now}</p>
         </div>
     </div>`;
 
@@ -129,11 +140,34 @@ function generateNoErrorsReport() {
 }
 
 /**
- * Relatório com erros, layout mais elaborado
+ * Um card por erro — hora, tipo, descrição e link (quando existir)
  */
-function generateHtmlReport(summary) {
-    const { totalErrors, errorsByType, affectedCards, logDetails } = summary;
-    const now = new Date().toLocaleString('pt-BR');
+function errorCard(log) {
+    const color = colorFor(log.category);
+    const linkRow = log.cardUrl ? `
+            <a href="${escapeHtml(log.cardUrl)}" style="display:inline-block;margin-top:10px;color:#2563eb;text-decoration:none;font-weight:600;font-size:13px;">
+                Acessar card →
+            </a>` : '';
+
+    return `
+        <div style="background:#ffffff;border-radius:10px;padding:16px 18px;margin-bottom:12px;border-left:4px solid ${color};box-shadow:0 1px 2px rgba(0,0,0,0.06);">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                <span style="background:${color}20;color:${color};padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;">
+                    ${escapeHtml(log.category)}
+                </span>
+                <span style="font-size:12px;color:#6b7280;">${escapeHtml(log.timestamp)}</span>
+            </div>
+            <p style="margin:10px 0 0;font-size:13px;color:#374151;line-height:1.5;">${escapeHtml(log.message)}</p>
+            ${linkRow}
+        </div>`;
+}
+
+/**
+ * Relatório com erros do dia, em cards
+ */
+function generateHtmlReport(summary, targetDate) {
+    const { totalErrors, errorsByType, logDetails } = summary;
+    const dayLabel = dateKey(targetDate);
 
     const statsCards = Object.entries(errorsByType).map(([type, count]) => `
         <td style="padding:6px;">
@@ -143,43 +177,14 @@ function generateHtmlReport(summary) {
             </div>
         </td>`).join('');
 
-    const affectedCardsSection = affectedCards.length > 0 ? `
-        <div style="margin-top:28px;">
-            <h2 style="font-size:15px;color:#111827;margin:0 0 12px;">🔗 Cards Afetados Diretamente</h2>
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,0.06);">
-                <tr style="background:#f9fafb;">
-                    <th align="left" style="padding:10px 14px;font-size:12px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Data/Hora</th>
-                    <th align="left" style="padding:10px 14px;font-size:12px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Tipo</th>
-                    <th align="left" style="padding:10px 14px;font-size:12px;color:#6b7280;border-bottom:1px solid #e5e7eb;">Card</th>
-                </tr>
-                ${affectedCards.map(item => `
-                <tr>
-                    <td style="padding:10px 14px;font-size:13px;border-bottom:1px solid #f3f4f6;color:#374151;">${escapeHtml(item.timestamp)}</td>
-                    <td style="padding:10px 14px;font-size:13px;border-bottom:1px solid #f3f4f6;">
-                        <span style="background:${colorFor(item.category)}20;color:${colorFor(item.category)};padding:3px 8px;border-radius:999px;font-size:11px;font-weight:600;">${escapeHtml(item.category)}</span>
-                    </td>
-                    <td style="padding:10px 14px;font-size:13px;border-bottom:1px solid #f3f4f6;">
-                        <a href="${escapeHtml(item.url)}" style="color:#2563eb;text-decoration:none;font-weight:600;">Acessar card →</a>
-                    </td>
-                </tr>`).join('')}
-            </table>
-        </div>` : '';
-
-    const logDetailsSection = logDetails.map(log => `
-        <div style="background:#ffffff;border-left:4px solid ${colorFor(log.category)};border-radius:8px;padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-            <div style="display:flex;justify-content:space-between;gap:12px;font-size:12px;color:#6b7280;margin-bottom:4px;">
-                <span style="color:${colorFor(log.category)};font-weight:700;">${escapeHtml(log.category)}</span>
-                <span>${escapeHtml(log.timestamp)}</span>
-            </div>
-            <div style="font-size:13px;color:#374151;line-height:1.5;">${escapeHtml(log.message)}</div>
-        </div>`).join('');
+    const cardsSection = logDetails.map(errorCard).join('');
 
     const body = `
     <div style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
         <div style="background:linear-gradient(135deg,#991b1b,#dc2626);padding:28px 32px;">
             <div style="font-size:28px;">📊</div>
             <h1 style="margin:8px 0 4px;color:#ffffff;font-size:20px;">Relatório de Monitoramento de Erros</h1>
-            <p style="margin:0;color:#fecaca;font-size:13px;">Gerado em ${now}</p>
+            <p style="margin:0;color:#fecaca;font-size:13px;">Referente a ${dayLabel}</p>
         </div>
 
         <div style="padding:24px 32px 8px;">
@@ -192,10 +197,8 @@ function generateHtmlReport(summary) {
                 <tr>${statsCards}</tr>
             </table>
 
-            ${affectedCardsSection}
-
-            <h2 style="font-size:15px;color:#111827;margin:28px 0 10px;">📋 Histórico Detalhado</h2>
-            ${logDetailsSection}
+            <h2 style="font-size:15px;color:#111827;margin:28px 0 10px;">📋 Erros do Dia</h2>
+            ${cardsSection}
         </div>
 
         <div style="padding:16px 32px;background:#f9fafb;text-align:center;">
@@ -220,6 +223,7 @@ async function sendReport(reportContent, summary) {
             totalErrors: summary.totalErrors,
             errorsByType: summary.errorsByType,
             report: reportContent,
+            reportTile: summary.totalErrors == 0 ? "Relatório diário do Goalfy: sem erros" : "Relatório de Erros diários do Goalfy"
         }),
     });
 
@@ -231,42 +235,27 @@ async function sendReport(reportContent, summary) {
     return response;
 }
 
-/**
- * Limpa o conteúdo do arquivo de log, mantendo o arquivo (só esvazia)
- */
-function clearLogFile(logFilePath) {
-    fs.writeFileSync(logFilePath, '', 'utf-8');
-    console.log(`🧹 Log limpo em: ${logFilePath}`);
-}
-
-
 export function cronJobErrorRelatory() {
 
     cron.schedule('0 8 * * 1-5', async () => {
         console.log('Executando cron job (CronJobErrorRelatory):', new Date().toISOString());
         try {
-            const summary = processErrorLogs(inputLogPath);
+            const today = new Date();
+            const summary = processErrorLogs(inputLogPath, today);
 
             const reportContent = summary.totalErrors === 0
-                ? generateNoErrorsReport()
-                : generateHtmlReport(summary);
+                ? generateNoErrorsReport(today)
+                : generateHtmlReport(summary, today);
 
-            // Só limpa se o envio foi confirmado (sendReport lança erro se falhar)
             await sendReport(reportContent, summary);
 
             console.log(summary.totalErrors === 0
-                ? `✅ Nenhum erro encontrado — relatório informativo enviado para: ${REPORT_ENDPOINT}`
+                ? `✅ Nenhum erro encontrado hoje — relatório informativo enviado para: ${REPORT_ENDPOINT}`
                 : `✅ Relatório enviado com sucesso para: ${REPORT_ENDPOINT}`);
-
-            // Limpa o log só quando havia algo a limpar
-            if (summary.totalErrors > 0) {
-                clearLogFile(inputLogPath);
-            }
         } catch (error) {
             console.error('❌ Erro ao processar:', error.message);
-            // Se o envio falhar, o log NÃO é limpo — nada se perde
         }
     }, {
-        timezone: 'America/Sao_Paulo', // importante para não rodar no horário errado (UTC)
+        timezone: 'America/Sao_Paulo',
     });
 }

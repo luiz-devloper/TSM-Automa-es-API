@@ -38,7 +38,7 @@ export class GoalfyApiAdapter {
 
         // fetch NÃO rejeita em 4xx/5xx, então é preciso checar manualmente
         if (!response.ok) {
-            await logger.error(`Erro ao tentar mover card https://app.goalfy.com.br/board/${boardId}/cards/${cardId}`);
+            await logger.error(`Erro ao tentar mover card https://app.goalfy.com.br/board/${boardId}/cards/${cardId} para a fase com identificador ${phaseId}`);
             throw MoveCardError.create(cardId, phaseId);
         }
 
@@ -115,7 +115,7 @@ export class GoalfyApiAdapter {
             const data = await response.json();
             return data
         } catch (error) {
-             await logger.error(`erro ao criar os card de procedimentos vinculados ao card de ordem de serviço https://app.goalfy.com.br/board/313e2ecc-6f4f-4dd5-a873-f64343e7a3e0/cards/${cardId}`)
+             await logger.error(`erro ao criar os card de procedimentos vinculados ao card de ordem de serviço https://app.goalfy.com.br/board/075a03af-376f-4053-be5c-4f295d9f91f4/cards/${cardId}`)
             throw UnexpectedError.create("não foi posivel criar procedimentos relacionado á ordem de serviço")
         }
     }
@@ -135,7 +135,7 @@ export class GoalfyApiAdapter {
             const data = await response.json();
             return data
         } catch (error) {
-            await logger.error(`erro ao vincular os card de procedimentos ao card de ordem de serviço https://app.goalfy.com.br/board/313e2ecc-6f4f-4dd5-a873-f64343e7a3e0/cards/${cardId}`)
+            await logger.error(`erro ao vincular os card de procedimentos ao card de ordem de serviço https://app.goalfy.com.br/board/075a03af-376f-4053-be5c-4f295d9f91f4/cards/${cardId}`)
             throw UnexpectedError.create("não foi posivel vincular procedimentos relacionado á ordem de serviço")
         }
     }
