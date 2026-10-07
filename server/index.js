@@ -4,7 +4,8 @@ import helmet from "helmet";
 import dotenv from "dotenv"
 import { validadeKey } from "../utils/validateApiKey.js";
 import { CardsRoutes } from "../components/cards/card-router.js";
-import { CronJobVerifyCardsInExecution } from "../components/cards/cronjobs/verify-cards-execution.js";
+import { cronJobVerifyCardsInExecution } from "../components/cronjobs/verify-cards-execution.js";
+import { cronJobErrorRelatory } from "../components/cronjobs/errors-day-relatory.js";
 
 dotenv.config();
 
@@ -39,5 +40,6 @@ function setupRoutes() {
 
 
 function executeCronJobs() {
-    CronJobVerifyCardsInExecution();
+    cronJobVerifyCardsInExecution();
+    cronJobErrorRelatory()
 }

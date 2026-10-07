@@ -12,9 +12,6 @@ const inputLogPath = process.env.LOG_PATH
 
 const REPORT_ENDPOINT = 'https://flow.goalfy.com.br/automations/v1/d314c99f-b39d-4093-bf65-32ad3310c0c1/hooks/catch/';
 
-console.log(`📍 Diretório do script: ${__dirname}`);
-console.log(`🎯 Caminho absoluto do log: ${inputLogPath}`);
-
 /**
  * Lê o arquivo de logs e analisa as entradas
  */
@@ -242,30 +239,34 @@ function clearLogFile(logFilePath) {
     console.log(`🧹 Log limpo em: ${logFilePath}`);
 }
 
-cron.schedule('0 8 * * 1-5', async () => {
-    console.log('Executando cron job (CronJobErrorRelatory):', new Date().toISOString());
-    try {
-        const summary = processErrorLogs(inputLogPath);
 
-        const reportContent = summary.totalErrors === 0
-            ? generateNoErrorsReport()
-            : generateHtmlReport(summary);
+export function cronJobErrorRelatory() {
 
-        // Só limpa se o envio foi confirmado (sendReport lança erro se falhar)
-        await sendReport(reportContent, summary);
+    cron.schedule('0 8 * * 1-5', async () => {
+        console.log('Executando cron job (CronJobErrorRelatory):', new Date().toISOString());
+        try {
+            const summary = processErrorLogs(inputLogPath);
 
-        console.log(summary.totalErrors === 0
-            ? `✅ Nenhum erro encontrado — relatório informativo enviado para: ${REPORT_ENDPOINT}`
-            : `✅ Relatório enviado com sucesso para: ${REPORT_ENDPOINT}`);
+            const reportContent = summary.totalErrors === 0
+                ? generateNoErrorsReport()
+                : generateHtmlReport(summary);
 
-        // Limpa o log só quando havia algo a limpar
-        if (summary.totalErrors > 0) {
-            clearLogFile(inputLogPath);
+            // Só limpa se o envio foi confirmado (sendReport lança erro se falhar)
+            await sendReport(reportContent, summary);
+
+            console.log(summary.totalErrors === 0
+                ? `✅ Nenhum erro encontrado — relatório informativo enviado para: ${REPORT_ENDPOINT}`
+                : `✅ Relatório enviado com sucesso para: ${REPORT_ENDPOINT}`);
+
+            // Limpa o log só quando havia algo a limpar
+            if (summary.totalErrors > 0) {
+                clearLogFile(inputLogPath);
+            }
+        } catch (error) {
+            console.error('❌ Erro ao processar:', error.message);
+            // Se o envio falhar, o log NÃO é limpo — nada se perde
         }
-    } catch (error) {
-        console.error('❌ Erro ao processar:', error.message);
-        // Se o envio falhar, o log NÃO é limpo — nada se perde
-    }
-}, {
-    timezone: 'America/Sao_Paulo', // importante para não rodar no horário errado (UTC)
-});
+    }, {
+        timezone: 'America/Sao_Paulo', // importante para não rodar no horário errado (UTC)
+    });
+}

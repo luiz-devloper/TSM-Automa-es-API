@@ -1,9 +1,9 @@
-import { GoalfyApiAdapter } from "../card-externalApi.js";
 import cron from "node-cron";
+import { GoalfyApiAdapter } from "../cards/card-externalApi.js";
 
 const goalfyApi = new GoalfyApiAdapter();
 
-export function CronJobVerifyCardsInExecution() {
+export function cronJobVerifyCardsInExecution() {
 
     cron.schedule('0 0 * * *', async () => {
         console.log('Executando cron job (CronJobVerifyCardsInExecution):', new Date().toISOString());
