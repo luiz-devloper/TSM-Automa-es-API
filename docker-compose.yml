@@ -10,5 +10,5 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
-    command: npm run hom
+    command: npm run start
     restart: unless-stopped

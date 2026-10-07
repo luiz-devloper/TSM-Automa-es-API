@@ -126,7 +126,6 @@ export class CardAutomacoesService {
             });
 
         } catch (error) {
-            console.log(error);
             return Result.fail(UnexpectedError.create("não foi posivel criar procedimentos relacionado á ordem de serviço"))
         }
     }
