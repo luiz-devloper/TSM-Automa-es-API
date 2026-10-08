@@ -223,6 +223,11 @@ async function sendReport(reportContent, summary) {
             totalErrors: summary.totalErrors,
             errorsByType: summary.errorsByType,
             report: reportContent,
+            dateReport: new Date().toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+            }),
             reportTile: summary.totalErrors == 0 ? "Relatório diário do Goalfy: sem erros" : "Relatório de Erros diários do Goalfy"
         }),
     });
