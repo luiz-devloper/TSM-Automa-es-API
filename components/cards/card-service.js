@@ -133,7 +133,7 @@ export class CardAutomacoesService {
 
     async linkProcedutesInWorkOrder(formId, cardId, values, fieldInfoId) {
         try {
-            const data = await this.#goalfyApi.updateCard(formId,fieldInfoId,values,cardId);
+            const data = await this.#goalfyApi.updateCard(formId,fieldInfoId,JSON.parse(values),cardId);
             return Result.ok(data);
         } catch (error) {
             return Result.fail(UnexpectedError.create("não foi posivel vincular procedimentos relacionado á ordem de serviço"))

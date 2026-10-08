@@ -25,11 +25,11 @@ export function cronJobVerifyCardsInExecution() {
                 // ja foram para outra fase. E PORTANTO SE ISSO FOR VERDADEIRO, ESSA CONDICIONAL SERÁ FALSE;
                 if (phaseTitles.includes(process.env.PROCEDURES_EXECUTION_PHASE) == false) {
                     // portanto: mover o agendamento para "devolução de peças"
-                    goalfyApi.moveCardToPhase(schedulingId, process.env.SCHEDULING_RETURN_PHASE, process.env.PROCEDURE_BOARD_ID)
+                    await goalfyApi.moveCardToPhase(schedulingId, process.env.SCHEDULING_RETURN_PHASE, process.env.PROCEDURE_BOARD_ID)
                 }
             }
-        } catch (error) {
-            await logger.error(`Erro ao verificar os procediementos atrelados á agendamentos`);
+        } catch (error) { 
+            await logger.error(`Erro ao fazer varredura de procedimentos. Os cards de agendamento podem estar desatualizados`);
         }
     });
 
