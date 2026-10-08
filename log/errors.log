@@ -5,3 +5,6 @@
 {"timestamp":"2026-09-29T14:03:00.717Z","level":"error","message":"Erro ao tentar mover card https://app.goalfy.com.br/board/0bab7dcc-b9fe-4893-8e98-cef2f5b0ebfd/cards/f1fb368f-2074-48aa-afea-3ed00d90c791"}
 {"timestamp":"2026-09-29T13:50:00.774Z","level":"error","message":"Erro ao verificar os procediementos atrelados á agendamentos"}
 {"timestamp":"2026-09-29T14:03:00.717Z","level":"error","message":"Erro ao tentar mover card https://app.goalfy.com.br/board/0bab7dcc-b9fe-4893-8e98-cef2f5b0ebfd/cards/f1fb368f-2074-48aa-afea-3ed00d90c791"}
+{"timestamp":"2026-10-07T17:19:10.474Z","level":"error","message":"erro ao vincular os card de procedimentos ao card de ordem de serviço https://app.goalfy.com.br/board/075a03af-376f-4053-be5c-4f295d9f91f4/cards/"}
+{"timestamp":"2026-10-07T17:19:25.522Z","level":"error","message":"erro ao vincular os card de procedimentos ao card de ordem de serviço https://app.goalfy.com.br/board/075a03af-376f-4053-be5c-4f295d9f91f4/cards/"}
+{"timestamp":"2026-10-07T17:20:19.467Z","level":"error","message":"erro ao vincular os card de procedimentos ao card de ordem de serviço https://app.goalfy.com.br/board/075a03af-376f-4053-be5c-4f295d9f91f4/cards/"}

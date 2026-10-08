@@ -81,32 +81,32 @@ export class GoalfyApiAdapter {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": this.#goalfyKey },
                 body: JSON.stringify({
-                    modelId: "06b0672a-ed2f-46fa-8fe4-37a231a4f9e9",
+                    modelId: process.env.MODEL_ID,
                     fields: [
                         //infoId do cliente
                         {
                             value: [clientId],
-                            fieldInfoId: "4dc17160-7455-46e9-8021-ae3cbc89b1ee"
+                            fieldInfoId: process.env.INFO_CLIENT_ID
                         },
                         //ordem de serviço
                         {
                             value: workOrder,
-                            fieldInfoId: "d4b431e2-2e59-40df-a14d-9d356ee5ceb8"
+                            fieldInfoId: process.env.INFO_WORK_ORDER
                         },
                         //placa
                         {
                             value: plate,
-                            fieldInfoId: "0c00be42-f82f-4184-80d5-7abaca6845a8"
+                            fieldInfoId: process.env.INFO_PLATE
                         },
                         //tipo solicitação
                         {
                             value: typeRequest,
-                            fieldInfoId: "7cfa399d-2726-453c-8e81-0b626a6e6be2"
+                            fieldInfoId: process.env.INFO_TYPE_REQUEST
                         },
                         //helpDesk
                         {
                             value: helpDesk,
-                            fieldInfoId: "2c2ee200-dc71-407e-bd05-7edd0fcab38b"
+                            fieldInfoId: process.env.INFO_HELPDESK
                         }
                     ]
                 })
@@ -127,7 +127,7 @@ export class GoalfyApiAdapter {
                 headers: { "Content-Type": "application/json", "Authorization": this.#goalfyKey },
                 body: JSON.stringify({
                     fieldInfoId: fieldInfoId,
-                    value: [...values],
+                    value: values,
                     cardId: cardId
                 })
             });

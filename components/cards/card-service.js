@@ -122,17 +122,18 @@ export class CardAutomacoesService {
                 formId,
                 values: JSON.stringify(proceduresId),
                 cardId,
-                fieldInfoId: "793dadd4-fdc5-4cbb-9e9a-0e111d673beb"
+                fieldInfoId: process.env.CONNECTED_BOARD
             });
 
         } catch (error) {
+            console.log(error);
             return Result.fail(UnexpectedError.create("não foi posivel criar procedimentos relacionado á ordem de serviço"))
         }
     }
 
     async linkProcedutesInWorkOrder(formId, cardId, values, fieldInfoId) {
         try {
-            const data = await this.#goalfyApi.updateCard(formId,fieldInfoId,JSON.parse(values),cardId);
+            const data = await this.#goalfyApi.updateCard(formId,fieldInfoId,values,cardId);
             return Result.ok(data);
         } catch (error) {
             return Result.fail(UnexpectedError.create("não foi posivel vincular procedimentos relacionado á ordem de serviço"))
